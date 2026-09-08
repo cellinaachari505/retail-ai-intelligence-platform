@@ -1,14 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
-  Users,
   Footprints,
   Clock,
   CheckCircle2,
-  BellRing,
   Percent,
   Sparkles,
   ArrowRight,
-  TrendingUp,
+  AlertTriangle,
+  Package,
+  ShoppingCart,
+  CheckCheck,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -22,58 +23,83 @@ import {
 import { useRetail } from '../context/RetailContext';
 import { KPICard } from '../components/KPICard';
 import { StoreHeatmap } from '../components/StoreHeatmap';
-import { QueueOverviewWidget } from '../components/QueueOverviewWidget';
-import { ShelfMonitorWidget } from '../components/ShelfMonitorWidget';
-import { AlertsTable } from '../components/AlertsTable';
 import { Link } from 'react-router-dom';
 
 export const DashboardPage: React.FC = () => {
-  const { kpis, hourlyTraffic, alerts } = useRetail();
+  const {
+    kpis,
+    hourlyTraffic,
+    alerts,
+    recommendations,
+    applyRecommendation,
+    counters,
+    shelves,
+  } = useRetail();
+
+  const [actionSuccessMessage, setActionSuccessMessage] = useState<string | null>(null);
+
+  // Highest priority unapplied recommendation
+  const unappliedRecs = recommendations.filter(r => !r.applied);
+  const activeRecommendation = unappliedRecs[0];
+
+  // Derive counts for supporting status summaries
+  const openCounters = counters.filter(c => c.status === 'open' || c.status === 'express');
+  const activeAlerts = alerts.filter(a => !a.resolved);
+  const criticalAlertsCount = activeAlerts.filter(a => a.severity === 'critical').length;
+  const highAlertsCount = activeAlerts.filter(a => a.severity === 'high').length;
+  const outOfStockShelves = shelves.filter(s => s.status === 'out_of_stock');
+  const lowStockShelves = shelves.filter(s => s.status === 'low_stock');
+
+  const handleTakeAction = (recId: string, actionLabel: string) => {
+    applyRecommendation(recId);
+    setActionSuccessMessage(`Action executed: ${actionLabel}`);
+    setTimeout(() => {
+      setActionSuccessMessage(null);
+    }, 4000);
+  };
 
   return (
     <div id="dashboard-page" className="space-y-6 pb-12">
-      {/* Top Welcome / Edge Mission Banner in Modern Dark SaaS Style */}
-      <div className="bg-[#0f172a] rounded-xl p-5 text-white shadow-sm border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[10px] font-mono font-bold tracking-wider text-emerald-400 uppercase">
-              On-Device Edge Inference Active
+          <div className="flex items-center gap-2 mb-1">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Live Telemetry Active
             </span>
-            <span className="text-xs text-slate-500">•</span>
-            <span className="text-xs text-slate-300">100% Privacy Preserved (Zero Cloud Video Stream)</span>
+            <span className="text-xs text-slate-400">•</span>
+            <span className="text-xs font-medium text-slate-500">Store #104 (Hypermarket)</span>
           </div>
-          <h2 className="text-lg sm:text-xl font-bold mt-1 text-white tracking-tight">
-            Store #104 Operations Intelligence Overview
-          </h2>
-          <p className="text-xs text-slate-400 mt-1 max-w-2xl">
-            Real-time on-premise AI monitoring footfall density, queue wait times, and automated shelf availability with zero cloud latency.
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+            Store Operations Intelligence Overview
+          </h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Real-time shopper flow, operational bottlenecks, and automated AI recommendations
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-stretch sm:self-auto shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0">
           <Link
             to="/staff"
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-xs font-semibold text-white transition-colors shadow-xs"
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs font-semibold text-white transition-colors shadow-xs"
           >
             Launch Staff Terminal <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
       </div>
 
-      {/* KPI Cards Row - Strictly aligned with 6 Core Retail Intelligence KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5">
+      {/* SECTION 1 — TOP SUMMARY / KPIS (5 Priority Operational Metrics) */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
         <KPICard
           id="kpi-footfall"
           title="Footfall"
           value={kpis.footfallToday.toLocaleString()}
-          unit="shoppers"
           changePct={kpis.footfallChangePct}
-          changeLabel="vs yesterday"
-          secondaryInfo={`${kpis.customersInside} inside now`}
+          changeLabel="vs yday"
+          secondaryInfo={`${kpis.customersInside} inside`}
           icon={<Footprints className="h-4 w-4 text-blue-500" />}
           status="normal"
-          progressPct={72}
         />
 
         <KPICard
@@ -82,37 +108,21 @@ export const DashboardPage: React.FC = () => {
           value={kpis.conversionRatePct}
           unit="%"
           changePct={kpis.conversionChangePct}
-          changeLabel="vs last week"
-          secondaryInfo="412 transactions"
+          changeLabel="vs last wk"
+          secondaryInfo="412 txns"
           icon={<Percent className="h-4 w-4 text-emerald-500" />}
           status="success"
-          progressPct={kpis.conversionRatePct}
         />
 
         <KPICard
           id="kpi-queue-wait"
           title="Avg Queue Time"
           value={kpis.avgQueueTimeMinutes}
-          unit="mins"
-          changePct={kpis.queueTimeChangePct}
-          changeLabel="target: <4.5m"
-          secondaryInfo="3 open counters"
+          unit="min"
+          comparisonText={`${kpis.queueTimeChangePct > 0 ? '+' : ''}${kpis.queueTimeChangePct}m vs target`}
+          secondaryInfo="Target < 4.5m"
           icon={<Clock className="h-4 w-4 text-amber-500" />}
           status={kpis.avgQueueTimeMinutes > 4.5 ? 'danger' : 'normal'}
-          progressPct={Math.min(100, Math.round((kpis.avgQueueTimeMinutes / 8) * 100))}
-        />
-
-        <KPICard
-          id="kpi-staff-efficiency"
-          title="Staff Efficiency"
-          value={91.8}
-          unit="%"
-          changePct={3.2}
-          changeLabel="operational SLA"
-          secondaryInfo="4 of 5 active"
-          icon={<Users className="h-4 w-4 text-indigo-500" />}
-          status="success"
-          progressPct={92}
         />
 
         <KPICard
@@ -121,63 +131,190 @@ export const DashboardPage: React.FC = () => {
           value={kpis.stockAvailabilityPct}
           unit="%"
           changePct={kpis.stockAvailabilityChangePct}
-          changeLabel="on-shelf availability"
-          secondaryInfo="34 SKUs monitored"
+          changeLabel="vs SLA"
+          secondaryInfo={`${outOfStockShelves.length + lowStockShelves.length} SKUs low`}
           icon={<CheckCircle2 className="h-4 w-4 text-emerald-500" />}
           status={kpis.stockAvailabilityPct < 85 ? 'warning' : 'success'}
-          progressPct={kpis.stockAvailabilityPct}
         />
 
         <KPICard
           id="kpi-active-alerts"
           title="Active Alerts"
-          value={kpis.activeAlertsCount}
-          unit={kpis.criticalAlertsCount > 0 ? `(${kpis.criticalAlertsCount} crit)` : undefined}
-          secondaryInfo={kpis.criticalAlertsCount > 0 ? 'Immediate Action' : 'All clear'}
-          icon={<BellRing className="h-4 w-4 text-rose-500" />}
-          status={kpis.criticalAlertsCount > 0 ? 'danger' : kpis.activeAlertsCount > 0 ? 'warning' : 'success'}
-          progressPct={kpis.activeAlertsCount > 0 ? 80 : 15}
+          value={activeAlerts.length}
+          comparisonText={
+            criticalAlertsCount > 0
+              ? `${criticalAlertsCount} critical`
+              : `${highAlertsCount} high priority`
+          }
+          secondaryInfo="Requires review"
+          icon={<AlertTriangle className="h-4 w-4 text-rose-500" />}
+          status={criticalAlertsCount > 0 ? 'danger' : highAlertsCount > 0 ? 'danger' : activeAlerts.length > 0 ? 'warning' : 'success'}
         />
       </div>
 
-      {/* Real-Time AI Autonomous Recommendation Banner matching theme */}
-      <div className="bg-[#0f172a] rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 sm:px-6 sm:py-4 gap-4 border border-slate-800 shadow-sm">
-        <div className="flex items-center gap-3 sm:gap-4">
-          <div className="w-10 h-10 rounded-full border border-blue-500/40 flex items-center justify-center text-blue-400 font-bold text-sm bg-blue-500/10 shrink-0">
-            <Sparkles className="h-5 w-5 text-blue-400" />
+      {/* SECTION 2 — PRIORITY ISSUE & AI ACTION (Action Required Dominant Card) */}
+      <div id="dashboard-action-required">
+        {actionSuccessMessage && (
+          <div className="mb-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-800 animate-in fade-in duration-200">
+            <span className="flex items-center gap-2 font-semibold">
+              <CheckCheck className="h-4 w-4 text-emerald-600" />
+              {actionSuccessMessage}
+            </span>
+            <span className="text-[11px] text-emerald-600">Updated store telemetry</span>
           </div>
-          <div>
-            <p className="text-blue-400 text-[10px] font-bold uppercase tracking-wider">
-              Autonomous Edge Recommendation
-            </p>
-            <p className="text-white text-xs sm:text-sm font-medium">
-              Counter 4 recommended to open in 8 mins: Predicted +28% surge in produce & billing zones
-            </p>
-          </div>
-        </div>
-        <Link
-          to="/staff"
-          className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded-md transition-colors whitespace-nowrap shadow-xs"
-        >
-          Dispatch Staff
-        </Link>
-      </div>
+        )}
 
-      {/* Traffic Trend Chart & Operational Health */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Real-time Traffic Curve */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
-            <div>
+        {activeRecommendation ? (
+          <div className="bg-white rounded-xl border-l-4 border-l-rose-500 border border-slate-200 p-5 shadow-sm">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-tight">Shopper Traffic & In-Store Occupancy</h3>
-                <span className="flex items-center gap-1 rounded bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
-                  <TrendingUp className="h-3 w-3 text-blue-600" />
-                  Today (08:00 - 22:00)
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-extrabold uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                  ACTION REQUIRED
+                </span>
+                <span className="text-xs text-slate-400">•</span>
+                <span className="text-xs text-slate-500">{activeRecommendation.timestamp}</span>
+              </div>
+              <span className="text-xs font-medium text-slate-400">Highest Priority Issue</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 py-4">
+              {/* Issue */}
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                  Issue
+                </span>
+                <p className="text-sm font-bold text-slate-900 leading-snug">
+                  {activeRecommendation.type === 'open_counter'
+                    ? 'Checkout congestion predicted'
+                    : activeRecommendation.type === 'replenish_shelf'
+                    ? 'Shelf stock-out predicted'
+                    : 'Store floor imbalance predicted'}
+                </p>
+                <span className="text-xs text-slate-500 mt-0.5 block">
+                  Location: {activeRecommendation.targetZone}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Hourly footfall entering the turnstiles vs concurrently active shoppers
+
+              {/* Current State */}
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                  Current state
+                </span>
+                {activeRecommendation.type === 'open_counter' ? (
+                  <div className="space-y-0.5 text-xs">
+                    <p className="text-slate-800">
+                      Queue wait: <strong className="text-rose-600 font-bold">{kpis.avgQueueTimeMinutes} min</strong>
+                    </p>
+                    <p className="text-slate-500">
+                      Target: <strong className="text-slate-700 font-semibold">&lt; 4.5 min</strong>
+                    </p>
+                  </div>
+                ) : activeRecommendation.type === 'replenish_shelf' ? (
+                  <div className="space-y-0.5 text-xs">
+                    <p className="text-slate-800">
+                      On-shelf: <strong className="text-rose-600 font-bold">4 units</strong>
+                    </p>
+                    <p className="text-slate-500">
+                      Target: <strong className="text-slate-700 font-semibold">&gt; 15 units</strong>
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-0.5 text-xs">
+                    <p className="text-slate-800">
+                      Status: <strong className="text-amber-600 font-bold">Density Alert</strong>
+                    </p>
+                    <p className="text-slate-500">
+                      Target: <strong className="text-slate-700 font-semibold">Balanced Flow</strong>
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* AI Recommendation */}
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 flex items-center gap-1 mb-1">
+                  <Sparkles className="h-3 w-3 text-blue-500" />
+                  AI Recommendation
+                </span>
+                <p className="text-sm font-bold text-slate-900 leading-snug">
+                  {activeRecommendation.type === 'open_counter'
+                    ? 'Open Counter 4 / Deploy 1 associate'
+                    : activeRecommendation.action}
+                </p>
+                <span className="text-xs text-slate-500 mt-0.5 block truncate" title={activeRecommendation.reason}>
+                  {activeRecommendation.reason}
+                </span>
+              </div>
+
+              {/* Expected Impact & Action */}
+              <div className="flex flex-col justify-between">
+                <div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                    Expected impact
+                  </span>
+                  <p className="text-xs font-semibold text-emerald-700 flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                    {activeRecommendation.type === 'open_counter'
+                      ? 'Reduce queue pressure'
+                      : activeRecommendation.type === 'replenish_shelf'
+                      ? 'Prevent lost revenue'
+                      : 'Restore balanced traffic'}
+                  </p>
+                </div>
+
+                <div className="pt-2 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleTakeAction(activeRecommendation.id, activeRecommendation.action)}
+                    className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-xs hover:shadow transition-all text-center cursor-pointer"
+                  >
+                    Take Action
+                  </button>
+                  <Link
+                    to="/staff"
+                    className="px-2.5 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors whitespace-nowrap"
+                  >
+                    Staff Terminal →
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl border border-emerald-200 p-4 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
+                <CheckCircle2 className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">All Operations Optimal</p>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  Checkout queues, staffing balance, and shelf health are currently operating within SLA targets.
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/staff"
+              className="text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 shadow-2xs whitespace-nowrap"
+            >
+              Staff Terminal →
+            </Link>
+          </div>
+        )}
+      </div>
+
+      {/* SECTION 3 — SUPPORTING VISUALS (Shopper Traffic & Staffing Efficiency) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Shopper Traffic Chart */}
+        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-5 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-tight">
+                Shopper Traffic
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Hourly footfall flow vs in-store occupancy
               </p>
             </div>
 
@@ -191,7 +328,7 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="h-64 sm:h-72 w-full pt-4">
+          <div className="h-60 sm:h-64 w-full pt-4">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={hourlyTraffic} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
@@ -242,18 +379,20 @@ export const DashboardPage: React.FC = () => {
           </div>
 
           <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <span>Peak Flow Window: <strong className="text-slate-800">18:00 - 19:30 (Evening Rush)</strong></span>
-            <span>Predicted Next Hour: <strong className="text-blue-600">+18% increase</strong></span>
+            <span>Peak Window: <strong className="text-slate-800">18:00 - 19:30</strong></span>
+            <Link to="/analytics" className="font-semibold text-blue-600 hover:text-blue-800">
+              View Analytics →
+            </Link>
           </div>
         </div>
 
-        {/* Staff Efficiency & Edge AI Operations Health Card */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+        {/* Staffing Efficiency Card */}
+        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-2xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="text-sm font-bold text-slate-800 uppercase tracking-tight">Staffing Efficiency</h3>
               <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                91.2% SLA
+                Operational SLA
               </span>
             </div>
 
@@ -261,10 +400,13 @@ export const DashboardPage: React.FC = () => {
               <div>
                 <div className="flex justify-between text-xs font-medium mb-1">
                   <span className="text-slate-600">Active Checkouts</span>
-                  <span className="text-slate-900 font-semibold">4 / 5 Open</span>
+                  <span className="text-slate-900 font-semibold">{openCounters.length} / {counters.length} Lanes Open</span>
                 </div>
                 <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-blue-600 rounded-full" style={{ width: '80%' }} />
+                  <div
+                    className="h-full bg-blue-600 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.round((openCounters.length / counters.length) * 100)}%` }}
+                  />
                 </div>
               </div>
 
@@ -281,7 +423,7 @@ export const DashboardPage: React.FC = () => {
               <div>
                 <div className="flex justify-between text-xs font-medium mb-1">
                   <span className="text-slate-600">Floor Assistance Velocity</span>
-                  <span className="text-slate-900 font-semibold">2.1 min response</span>
+                  <span className="text-slate-900 font-semibold">2.1 min avg response</span>
                 </div>
                 <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
                   <div className="h-full bg-blue-500 rounded-full" style={{ width: '86%' }} />
@@ -289,57 +431,170 @@ export const DashboardPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Micro edge insight */}
-            <div className="mt-5 p-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-700">
+            <div className="mt-4 p-3 rounded-lg bg-slate-50 border border-slate-100 text-slate-600">
               <p className="text-[11px] leading-relaxed">
-                Apparel zone has low customer traffic (8 shoppers). System recommends transferring 1 associate to Fresh Produce & Billing Counter 4.
+                Floor load balancing automatically redirects idle capacity to high-density checkout and produce aisles.
               </p>
             </div>
           </div>
 
-          <div className="pt-4 border-t border-slate-100 mt-4 flex items-center justify-between text-xs">
-            <span className="text-slate-500">Scheduled Staff: 6 Active</span>
+          <div className="pt-3 border-t border-slate-100 mt-4 flex items-center justify-between text-xs">
+            <span className="text-slate-500">Scheduled: 6 Active</span>
             <Link to="/staff" className="font-semibold text-blue-600 hover:text-blue-800">
-              Manage Staff & Tasks →
+              Manage Staff →
             </Link>
           </div>
         </div>
       </div>
 
-      {/* Interactive Store Floorplan & Heatmap */}
-      <StoreHeatmap />
+      {/* SECTION 4 — STORE ACTIVITY & SHOPPER DENSITY (Store Heatmap) */}
+      <div className="py-2">
+        <StoreHeatmap />
+      </div>
 
-      {/* Proactive Queue & Checkout Management */}
-      <QueueOverviewWidget />
-
-      {/* Automated Shelf Availability Grid */}
-      <ShelfMonitorWidget />
-
-      {/* Real-time Alerts Ticker / Quick View */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+      {/* SECTION 5 — DETAIL LINKS (Compact Operational Summaries) */}
+      <div className="pt-2">
+        <div className="flex items-center justify-between mb-3">
           <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-tight">Active Operational Incidents</h3>
-              <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-bold text-rose-800 border border-rose-200">
-                {alerts.filter(a => !a.resolved).length} Unresolved
-              </span>
-            </div>
+            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-tight">
+              Operational Status Summaries
+            </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              High-priority events requiring immediate store floor attention
+              Targeted operational snapshots with direct links to full management tools
             </p>
           </div>
-
-          <Link
-            to="/alerts"
-            className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1"
-          >
-            Open Alert Center →
-          </Link>
         </div>
 
-        <div className="mt-4">
-          <AlertsTable compact limit={3} />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Queue Status */}
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-tight flex items-center gap-1.5">
+                  <ShoppingCart className="h-3.5 w-3.5 text-blue-600" />
+                  Checkout Queues
+                </span>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    kpis.avgQueueTimeMinutes > 4.5
+                      ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                      : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                  }`}
+                >
+                  {kpis.avgQueueTimeMinutes > 4.5 ? 'Congested' : 'Optimal'}
+                </span>
+              </div>
+
+              <div className="mt-3 space-y-1 text-xs">
+                <p className="text-slate-800 font-semibold">
+                  {openCounters.length} of {counters.length} lanes active
+                </p>
+                <p className="text-slate-500">
+                  {counters.reduce((acc, c) => acc + c.queueLength, 0)} shoppers waiting across open counters
+                </p>
+                {kpis.avgQueueTimeMinutes > 4.5 && (
+                  <p className="text-rose-600 font-medium text-[11px] pt-1">
+                    Critical: Counter 2 queue exceeds SLA threshold
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 mt-3 flex items-center justify-between text-xs">
+              <span className="text-slate-400">Checkout Management</span>
+              <Link to="/staff" className="font-semibold text-blue-600 hover:text-blue-800">
+                View details →
+              </Link>
+            </div>
+          </div>
+
+          {/* Shelf Inventory Status */}
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-tight flex items-center gap-1.5">
+                  <Package className="h-3.5 w-3.5 text-indigo-600" />
+                  Shelf Replenishment
+                </span>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    outOfStockShelves.length > 0
+                      ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                      : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                  }`}
+                >
+                  {outOfStockShelves.length > 0 ? `${outOfStockShelves.length} Stock-out` : 'Stocked'}
+                </span>
+              </div>
+
+              <div className="mt-3 space-y-1 text-xs">
+                <p className="text-slate-800 font-semibold">
+                  {outOfStockShelves.length + lowStockShelves.length} products need replenishment
+                </p>
+                <p className="text-slate-500">
+                  {outOfStockShelves.length} stock-out in Dairy • {lowStockShelves.length} low stock SKUs
+                </p>
+                {outOfStockShelves.length > 0 && (
+                  <p className="text-amber-700 font-medium text-[11px] pt-1">
+                    Immediate restock flagged for Amul Taaza Milk 1L
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 mt-3 flex items-center justify-between text-xs">
+              <span className="text-slate-400">Inventory Management</span>
+              <Link to="/staff" className="font-semibold text-blue-600 hover:text-blue-800">
+                View details →
+              </Link>
+            </div>
+          </div>
+
+          {/* Incident Alerts */}
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-tight flex items-center gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5 text-rose-600" />
+                  Incident Alerts
+                </span>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    criticalAlertsCount > 0
+                      ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                      : highAlertsCount > 0
+                      ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                      : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                  }`}
+                >
+                  {criticalAlertsCount > 0
+                    ? `${criticalAlertsCount} Critical`
+                    : highAlertsCount > 0
+                    ? `${highAlertsCount} High Priority`
+                    : `${activeAlerts.length} Active`}
+                </span>
+              </div>
+
+              <div className="mt-3 space-y-1 text-xs">
+                <p className="text-slate-800 font-semibold">
+                  {activeAlerts.length} active alerts ({criticalAlertsCount > 0 ? `${criticalAlertsCount} critical` : `${highAlertsCount} high priority`})
+                </p>
+                <p className="text-slate-500">
+                  Highest priority: {activeAlerts[0]?.title || 'None'}
+                </p>
+                <p className="text-slate-400 text-[11px] pt-1">
+                  Camera vision telemetry verified on edge
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 mt-3 flex items-center justify-between text-xs">
+              <span className="text-slate-400">Alert Center</span>
+              <Link to="/alerts" className="font-semibold text-blue-600 hover:text-blue-800">
+                View Alerts →
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     </div>

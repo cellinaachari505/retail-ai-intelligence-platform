@@ -20,32 +20,32 @@ export const StoreHeatmap: React.FC<StoreHeatmapProps> = ({ onZoneSelect }) => {
     switch (density) {
       case 'congested':
         return {
-          fill: 'fill-rose-500/20',
-          stroke: 'stroke-rose-500',
+          fill: 'bg-rose-500/15 fill-rose-500/20',
+          stroke: 'border-rose-500 stroke-rose-500',
           badge: 'bg-rose-100 text-rose-800 border-rose-300',
           dot: 'bg-rose-500',
           label: 'Congested (>85%)',
         };
       case 'high':
         return {
-          fill: 'fill-amber-500/20',
-          stroke: 'stroke-amber-500',
+          fill: 'bg-amber-500/15 fill-amber-500/20',
+          stroke: 'border-amber-500 stroke-amber-500',
           badge: 'bg-amber-100 text-amber-800 border-amber-300',
           dot: 'bg-amber-500',
           label: 'High Traffic (65-85%)',
         };
       case 'moderate':
         return {
-          fill: 'fill-sky-500/15',
-          stroke: 'stroke-sky-500',
+          fill: 'bg-sky-500/15 fill-sky-500/15',
+          stroke: 'border-sky-500 stroke-sky-500',
           badge: 'bg-sky-100 text-sky-800 border-sky-300',
           dot: 'bg-sky-500',
           label: 'Moderate (35-65%)',
         };
       default:
         return {
-          fill: 'fill-emerald-500/15',
-          stroke: 'stroke-emerald-500',
+          fill: 'bg-emerald-500/15 fill-emerald-500/15',
+          stroke: 'border-emerald-500 stroke-emerald-500',
           badge: 'bg-emerald-100 text-emerald-800 border-emerald-300',
           dot: 'bg-emerald-500',
           label: 'Low (<35%)',
@@ -58,7 +58,7 @@ export const StoreHeatmap: React.FC<StoreHeatmapProps> = ({ onZoneSelect }) => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-bold text-slate-800 uppercase tracking-tight">Store Floorplan & Live Heatmap</h2>
+            <h2 className="text-sm font-bold text-slate-800 uppercase tracking-tight">Store Activity & Shopper Density</h2>
             <span className="flex items-center gap-1 rounded bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 border border-blue-200">
               <Sparkles className="h-3 w-3 text-blue-600" />
               Edge Spatial Vision
@@ -87,10 +87,10 @@ export const StoreHeatmap: React.FC<StoreHeatmapProps> = ({ onZoneSelect }) => {
       </div>
 
       {/* Floorplan Layout View */}
-      <div className="relative w-full aspect-[16/9] sm:aspect-[21/10] bg-[#0f172a] rounded-xl border border-slate-800 p-3 overflow-hidden shadow-inner select-none">
+      <div className="relative w-full aspect-[16/9] sm:aspect-[21/10] bg-[#222f46] rounded-xl border border-slate-700/80 p-3 overflow-hidden shadow-inner select-none">
         {/* Floor grid effect */}
         <div
-          className="absolute inset-0 opacity-10"
+          className="absolute inset-0 opacity-15"
           style={{
             backgroundImage: `radial-gradient(#94a3b8 1px, transparent 1px)`,
             backgroundSize: '20px 20px',
@@ -98,13 +98,13 @@ export const StoreHeatmap: React.FC<StoreHeatmapProps> = ({ onZoneSelect }) => {
         />
 
         {/* Entrance Marker */}
-        <div className="absolute top-2 left-6 z-10 flex items-center gap-1.5 bg-slate-800/90 text-[10px] font-bold text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/40">
+        <div className="absolute top-2 left-6 z-10 flex items-center gap-1.5 bg-slate-900/90 text-[10px] font-bold text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/50 shadow-xs">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
           MAIN STORE ENTRANCE / TURNSTILES
         </div>
 
         {/* Checkout Marker */}
-        <div className="absolute bottom-2 right-6 z-10 flex items-center gap-1.5 bg-slate-800/90 text-[10px] font-bold text-blue-400 px-2 py-0.5 rounded border border-blue-500/40">
+        <div className="absolute bottom-2 right-6 z-10 flex items-center gap-1.5 bg-slate-900/90 text-[10px] font-bold text-blue-400 px-2 py-0.5 rounded border border-blue-500/50 shadow-xs">
           EXIT & CHECKOUT GATES
         </div>
 
@@ -140,7 +140,7 @@ export const StoreHeatmap: React.FC<StoreHeatmapProps> = ({ onZoneSelect }) => {
                     <p className="text-[11px] sm:text-xs font-bold text-white leading-tight truncate">
                       {zone.name}
                     </p>
-                    <span className="text-[9px] text-slate-400 font-mono">{zone.category}</span>
+                    <span className="text-[9px] text-slate-300 font-mono font-medium">{zone.category}</span>
                   </div>
 
                   <div className="flex items-center gap-1 shrink-0">
@@ -149,7 +149,7 @@ export const StoreHeatmap: React.FC<StoreHeatmapProps> = ({ onZoneSelect }) => {
                         zone.density === 'congested' ? 'animate-ping' : ''
                       }`}
                     />
-                    <div className="hidden sm:flex items-center gap-0.5 text-[9px] text-slate-300 bg-black/40 px-1 py-0.5 rounded">
+                    <div className="hidden sm:flex items-center gap-0.5 text-[9px] text-slate-200 bg-slate-900/80 px-1 py-0.5 rounded border border-slate-700/60">
                       <Camera className="h-2.5 w-2.5 text-slate-400" />
                       <span className="font-mono">{zone.activeCameraId.split('-')[2]}</span>
                     </div>
@@ -158,16 +158,16 @@ export const StoreHeatmap: React.FC<StoreHeatmapProps> = ({ onZoneSelect }) => {
 
                 {/* Live Shoppers & Density Bar */}
                 <div className="mt-auto pt-1">
-                  <div className="flex items-center justify-between text-[10px] text-slate-200 mb-1">
-                    <span className="flex items-center gap-1 font-semibold">
-                      <Users className="h-3 w-3 text-slate-400" />
+                  <div className="flex items-center justify-between text-[10px] text-slate-100 mb-1 font-medium">
+                    <span className="flex items-center gap-1 font-semibold text-white">
+                      <Users className="h-3 w-3 text-slate-300" />
                       {zone.currentShoppers} / {zone.capacity}
                     </span>
-                    <span className="font-mono text-[9px] text-slate-300">{occupancyRatio}%</span>
+                    <span className="font-mono text-[9px] text-slate-200">{occupancyRatio}%</span>
                   </div>
 
                   {/* Visual density mini bar */}
-                  <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-1.5 w-full bg-slate-900/60 rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-500 ${
                         zone.density === 'congested'

@@ -160,7 +160,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
         <div className="space-y-1 text-[10px] text-slate-400">
           <div className="flex justify-between">
             <span>Model:</span>
-            <span className="text-slate-200 font-mono">YOLOv8 Edge</span>
+            <span className="text-slate-200 font-mono">YOLO26 Edge</span>
           </div>
           <div className="flex justify-between">
             <span>Edge Nodes:</span>

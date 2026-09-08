@@ -427,9 +427,9 @@ export const RetailProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       newAlert = {
         id: newId,
         type: 'out_of_stock',
-        severity: 'critical',
-        title: 'Critical Out of Stock: Fortune Sunflower Oil 5L',
-        description: 'Shelf A3 empty facing detected by CAM-EDGE-03. Customer reached for missing SKU.',
+        severity: 'high',
+        title: 'Product Out of Stock: Fortune Sunflower Oil 5L',
+        description: 'Fortune Sunflower Oil 5L is unavailable on Shelf A3. Confirmed zero units remaining by CAM-EDGE-03.',
         zone: 'Packaged Grocery & Staples',
         shelfId: 'shelf-a3',
         timestamp: 'Just now',
@@ -447,45 +447,30 @@ export const RetailProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } else if (type === 'low_stock') {
       newAlert = {
         id: newId,
-        type: 'low_stock',
-        severity: 'high',
-        title: 'Low Stock Alert: Aashirvaad Atta 10kg',
-        description: 'Facing count below replenishment threshold (4 units remaining). Reorder recommendation dispatched.',
+        type: 'crowd_congestion',
+        severity: 'medium',
+        title: 'Elevated Dwell Time Alert: Packaged Grocery',
+        description: 'Customer cluster dwell time exceeded 10 mins near aisle 3 without associate contact.',
         zone: 'Packaged Grocery & Staples',
-        shelfId: 'shelf-a2',
         timestamp: 'Just now',
         acknowledged: false,
         resolved: false,
         edgeConfidence: 0.95,
       };
-      setShelves(prev =>
-        prev.map(s =>
-          s.id === 'shelf-a2'
-            ? { ...s, currentUnits: 4, stockPercentage: 16, status: 'low_stock', facingIssues: true }
-            : s
-        )
-      );
     } else if (type === 'shelf_availability') {
       newAlert = {
         id: newId,
-        type: 'shelf_anomaly',
-        severity: 'medium',
-        title: 'Shelf Availability: Planogram Void & Disarrangement',
-        description: 'CAM-EDGE-05 detected empty facing gap and misplaced SKUs on Personal Care display aisle.',
-        zone: 'Personal Care & Home Essentials',
-        shelfId: 'shelf-a7',
+        type: 'long_queue',
+        severity: 'low',
+        title: 'Throughput Advisory: Counter 2',
+        description: 'Checkout pacing advisory dispatched. Queue flow nominal but approaching turnstile boundary.',
+        zone: 'Billing Counters & Queue Area',
+        counterId: 'counter-2',
         timestamp: 'Just now',
         acknowledged: false,
         resolved: false,
         edgeConfidence: 0.92,
       };
-      setShelves(prev =>
-        prev.map(s =>
-          s.id === 'shelf-a7'
-            ? { ...s, facingIssues: true }
-            : s
-        )
-      );
     } else {
       newAlert = {
         id: newId,
